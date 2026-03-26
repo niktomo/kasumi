@@ -1,5 +1,7 @@
 # Kasumi 霞
 
+[日本語](README.ja.md) | English
+
 Reversible 63-bit integer scrambling for Laravel.
 
 Sequential IDs like `1, 2, 3` become `00000000009ix, 0ptyf8rz1ekw, ...` — and calling scramble again returns the original value.
