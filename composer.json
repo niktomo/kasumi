@@ -1,0 +1,49 @@
+{
+    "name": "niktomo/kasumi",
+    "description": "Reversible 63-bit integer scrambling using modular multiplicative inverse",
+    "keywords": ["scramble", "obfuscate", "id", "integer", "bijection", "laravel"],
+    "homepage": "https://github.com/niktomo/kasumi",
+    "authors": [
+        {
+            "name": "niktomo",
+            "role": "Developer"
+        }
+    ],
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^8.4",
+        "illuminate/support": "^12.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^12.0",
+        "phpstan/phpstan": "^2.0",
+        "laravel/pint": "^1.0",
+        "orchestra/testbench": "^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Kasumi\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Kasumi\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Kasumi\\Laravel\\KasumiServiceProvider"
+            ],
+            "aliases": {
+                "Kasumi": "Kasumi\\Laravel\\Facades\\Kasumi"
+            }
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "stan": "vendor/bin/phpstan analyse --memory-limit=512M",
+        "pint": "vendor/bin/pint"
+    }
+}
