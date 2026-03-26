@@ -14,9 +14,9 @@ namespace Kasumi;
  */
 final class ScrambleKeyFactory
 {
-    private const int BITS = 63;
+    private const BITS = 63;
 
-    private const string MODULUS = Modulus::VALUE;
+    private const MODULUS = Modulus::VALUE;
 
     public function create(?int $salt = null): ScrambleKey
     {

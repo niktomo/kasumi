@@ -11,7 +11,7 @@ namespace Kasumi;
 final class Base36Encoder implements Encoder
 {
     /** Number of base36 digits required to represent PHP_INT_MAX (= 2^63 - 1). */
-    private const int LENGTH = 13;
+    private const LENGTH = 13;
 
     public function encode(int $n): string
     {

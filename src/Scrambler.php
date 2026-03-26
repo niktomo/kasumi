@@ -20,7 +20,7 @@ namespace Kasumi;
  */
 final class Scrambler
 {
-    private const string MODULUS = Modulus::VALUE;
+    private const MODULUS = Modulus::VALUE;
 
     public function __construct(
         private readonly ScrambleKey $key,

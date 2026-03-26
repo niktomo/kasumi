@@ -31,8 +31,9 @@ f(f(x)) = x
 
 ## Requirements
 
-- PHP ^8.4
+- PHP ^8.2
 - Laravel ^12.0
+- bcmath extension (bundled with PHP 8.4+; install separately on PHP 8.2/8.3)
 
 ## Installation
 
@@ -151,7 +152,7 @@ return [
 - `scramble(0)` returns `0` (trivial fixed point). Avoid passing `0` if this is a concern.
 - Valid input range: `[1, PHP_INT_MAX]` (63-bit non-negative integers).
 - The salt must be an **odd integer**. `kasumi:salt:generate` guarantees this.
-- bcmath extension is required. It is bundled with PHP 8.4+.
+- bcmath extension is required. It is bundled with PHP 8.4+. Install separately on PHP 8.2/8.3.
 
 ## License
 

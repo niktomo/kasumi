@@ -10,5 +10,5 @@ namespace Kasumi;
  */
 final class Modulus
 {
-    public const string VALUE = '9223372036854775808';
+    public const VALUE = '9223372036854775808';
 }
