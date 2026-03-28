@@ -144,6 +144,40 @@ class Base62Encoder implements Encoder
 $scrambler = Scrambler::fromSalt($salt, new Base62Encoder());
 ```
 
+## ChecksumEncoder
+
+`ChecksumEncoder` is a decorator that wraps any `Encoder` and adds tamper detection. It appends a 5-character base36 checksum derived from the inner encoding:
+
+- **2-character prefix** — prepended to the output for a quick validity check
+- **3 filler characters** — inserted at fixed positions inside the body as noise
+
+Output length is `2 + innerLength + 3`. With `Base36Encoder` (14 chars), the total is **19 characters**.
+
+`decode()` throws `\InvalidArgumentException` for any string that was not produced by this encoder — wrong length, tampered prefix, or tampered body all fail.
+
+```php
+use Kasumi\Base36Encoder;
+use Kasumi\ChecksumEncoder;
+use Kasumi\Scrambler;
+
+$encoder  = new ChecksumEncoder(new Base36Encoder());
+$scrambler = Scrambler::fromSalt(salt: 1234567891, encoder: $encoder);
+
+$result = $scrambler->scramble(12345);
+echo $result;           // 19-character string, e.g. "0g00000001x7y3riz4k"
+
+$original = $scrambler->scramble($result)->toInt(); // 12345
+
+// Decoding a tampered string throws \InvalidArgumentException
+$encoder->decode('zzzzzzzzzzzzzzzzzzzz'); // throws
+```
+
+`ChecksumEncoder` can also wrap a custom encoder:
+
+```php
+$encoder = new ChecksumEncoder(new Base62Encoder());
+```
+
 ## Artisan Commands
 
 ```bash
@@ -179,7 +213,7 @@ return [
 - Valid input range: `[0, PHP_INT_MAX]` (63-bit non-negative integers).
 - The salt must be an **odd integer**. `kasumi:salt:generate` guarantees this.
 - No bcmath or GMP extension required — all arithmetic uses native PHP integers.
-- The encoded string is always exactly **14 characters** (two zero-padded base36 halves).
+- The encoded string is always exactly **14 characters** (two zero-padded base36 halves) when using `Base36Encoder`, or **19 characters** when wrapped with `ChecksumEncoder`.
 - To unscramble, pass the `ScrambledValue` directly to `scramble()`. Avoid calling `toInt()` on the scrambled value before passing it back, as the intermediate value may exceed `PHP_INT_MAX`.
 
 ## License

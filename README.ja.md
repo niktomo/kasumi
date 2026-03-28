@@ -144,6 +144,40 @@ class Base62Encoder implements Encoder
 $scrambler = Scrambler::fromSalt($salt, new Base62Encoder());
 ```
 
+## ChecksumEncoder
+
+`ChecksumEncoder` は任意の `Encoder` をラップし、改ざん検出を追加するデコレータです。内部エンコード結果から 5 文字の base36 チェックサムを生成し、次のように付加します：
+
+- **2 文字プレフィックス** — 出力の先頭に付加する簡易チェック用
+- **3 文字フィラー** — ノイズとしてボディ内の固定位置に挿入
+
+出力長は `2 + innerLength + 3`。`Base36Encoder`（14 文字）を内部に使う場合、合計 **19 文字** になります。
+
+`decode()` はこのエンコーダが生成していない文字列（長さ不正・プレフィックス改ざん・ボディ改ざん）に対して `\InvalidArgumentException` をスローします。
+
+```php
+use Kasumi\Base36Encoder;
+use Kasumi\ChecksumEncoder;
+use Kasumi\Scrambler;
+
+$encoder   = new ChecksumEncoder(new Base36Encoder());
+$scrambler = Scrambler::fromSalt(salt: 1234567891, encoder: $encoder);
+
+$result = $scrambler->scramble(12345);
+echo $result;           // 19 文字の文字列、例: "0g00000001x7y3riz4k"
+
+$original = $scrambler->scramble($result)->toInt(); // 12345
+
+// 改ざんされた文字列は \InvalidArgumentException をスロー
+$encoder->decode('zzzzzzzzzzzzzzzzzzzz'); // throws
+```
+
+カスタム Encoder をラップすることも可能です：
+
+```php
+$encoder = new ChecksumEncoder(new Base62Encoder());
+```
+
 ## Artisan コマンド
 
 ```bash
@@ -179,7 +213,7 @@ return [
 - 有効な入力範囲：`[0, PHP_INT_MAX]`（63ビット非負整数）
 - salt は **奇数整数** でなければなりません。`kasumi:salt:generate` はこれを保証します。
 - bcmath・GMP 拡張は不要です。すべての演算をネイティブ PHP 整数で処理します。
-- エンコード後の文字列は常に **14文字固定**（ゼロパディングされた Base36 を2分割して連結）。
+- エンコード後の文字列は `Base36Encoder` 使用時は常に **14文字固定**（ゼロパディングされた Base36 を2分割して連結）。`ChecksumEncoder` でラップした場合は **19文字**。
 - アンスクランブルには `ScrambledValue` をそのまま `scramble()` に渡してください。中間値が `PHP_INT_MAX` を超える場合があるため、`toInt()` を経由しないでください。
 
 ## ライセンス
