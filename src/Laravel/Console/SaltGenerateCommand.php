@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Kasumi\Laravel\Console;
 
 use Illuminate\Console\Command;
-use Kasumi\ScrambleKeyFactory;
-
 class SaltGenerateCommand extends Command
 {
     protected $signature = 'kasumi:salt:generate
@@ -17,7 +15,7 @@ class SaltGenerateCommand extends Command
 
     public function handle(): int
     {
-        $salt = (new ScrambleKeyFactory())->create()->salt;
+        $salt = random_int(1, 0xFFFFFFFF) | 1;
 
         if ($this->option('show')) {
             $this->line('KASUMI_SCRAMBLE_SALT=' . $salt);
@@ -25,7 +23,7 @@ class SaltGenerateCommand extends Command
             return self::SUCCESS;
         }
 
-        $envPath = $this->laravel->environmentFilePath();
+        $envPath = $this->laravel->basePath('.env');
 
         if (! file_exists($envPath)) {
             $this->error('.env file not found: ' . $envPath);

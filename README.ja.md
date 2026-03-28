@@ -2,12 +2,12 @@
 
 English | [日本語](README.ja.md)
 
-Laravel 向け、63ビット整数の可逆スクランブルライブラリ。
+Laravel 向け、整数の可逆スクランブルライブラリ。
 
-`1, 2, 3` のような連番IDが `00000000009ix, 0ptyf8rz1ekw, ...` に変換され、もう一度 scramble を呼ぶと元の値に戻ります。
+`1, 2, 3` のような連番IDが `000000000009ix, 0ptyf8rz1ekw0, ...` に変換され、もう一度 scramble を呼ぶと元の値に戻ります。
 
 ```php
-$scrambler->scramble(12345);          // "00000000009ix"
+$scrambler->scramble(12345);          // "000000000009ix"
 $scrambler->scramble(/* decode */ …); // 12345 に戻る
 ```
 
@@ -18,13 +18,14 @@ $scrambler->scramble(/* decode */ …); // 12345 に戻る
 - **f(f(x)) = x** — 同じメソッド一つで暗号化・復号が完結。専用の decode は不要
 - **63ビット非負整数** — [Snowflake ID](https://en.wikipedia.org/wiki/Snowflake_ID) と完全に相性が良い（Snowflake IDは63ビット非負整数）
 - **決定論的** — salt が同じなら常に同じ結果。DBに保存不要
+- **bcmath 不要** — すべての演算をネイティブ PHP 整数で処理
 
 ## 仕組み
 
-[このアルゴリズム](https://cs.hatenablog.jp/entry/2013/06/19/135527) をベースにしています。
+[このアルゴリズム](https://cs.hatenablog.jp/entry/2013/06/19/135527) を、入力の上位32ビットと下位32ビットそれぞれに独立して適用します。
 
 ```
-scramble(x) = inverseSalt × reverseBits63(salt × x mod 2⁶³) mod 2⁶³
+scramble(x) = inverseSalt × reverseBits32(salt × x mod 2³²) mod 2³²
 ```
 
 この関数は **involutory（対合）** です — 2回適用すると元の値に戻ります。
@@ -34,14 +35,13 @@ f(f(x)) = x
 ```
 
 - `salt × x` — 乗算でビットを拡散（下位ビットは偏りやすい）
-- `reverseBits63(…)` — ビット反転で上位・下位を入れ替える
+- `reverseBits32(…)` — ビット反転で上位・下位を入れ替える
 - `inverseSalt × …` — モジュラー逆数による乗算で往復を実現
 
 ## 要件
 
 - PHP ^8.2
 - Laravel ^12.0
-- bcmath 拡張（PHP 8.4+ は同梱済み。8.2/8.3 は別途インストールが必要）
 
 ## インストール
 
@@ -66,11 +66,10 @@ use Kasumi\Laravel\Facades\Kasumi;
 
 $result = Kasumi::scramble(12345);
 
-echo $result;           // "00000000009ix"  (base36、常に13文字)
-echo $result->toInt();  // スクランブル後の整数値
+echo $result;           // "000000000009ix"  (base36、常に14文字)
 
-// アンスクランブル — 同じメソッドを使う
-$original = Kasumi::scramble($result->toInt())->toInt(); // 12345
+// アンスクランブル — ScrambledValue をそのまま渡す（toInt() 不要）
+$original = Kasumi::scramble($result)->toInt(); // 12345
 ```
 
 ### 依存性注入
@@ -84,9 +83,10 @@ class UserController
 
     public function show(string $encoded): Response
     {
-        $id   = $this->scrambler->scramble(
-            (new \Kasumi\Base36Encoder())->decode($encoded)
-        )->toInt();
+        $encoder         = new \Kasumi\Base36Encoder();
+        [$upper, $lower] = $encoder->decode($encoded);
+        $scrambled       = new \Kasumi\ScrambledValue($upper, $lower, $encoder);
+        $id              = $this->scrambler->scramble($scrambled)->toInt();
 
         $user = User::findOrFail($id);
         // …
@@ -106,8 +106,10 @@ $scrambler = Scrambler::fromSalt(
 );
 
 $result = $scrambler->scramble(12345);
-echo $result;           // "00000000009ix"
-echo $result->toInt();  // スクランブル後の整数値
+echo $result;           // "000000000009ix"
+
+// アンスクランブル
+$original = $scrambler->scramble($result)->toInt(); // 12345
 ```
 
 ## カスタム Encoder
@@ -119,8 +121,9 @@ use Kasumi\Encoder;
 
 class Base62Encoder implements Encoder
 {
-    public function encode(int $n): string { /* … */ }
-    public function decode(string $s): int { /* … */ }
+    public function encode(int $upper, int $lower): string { /* … */ }
+    /** @return array{0: int, 1: int} */
+    public function decode(string $s): array { /* … */ }
 }
 
 $scrambler = Scrambler::fromSalt($salt, new Base62Encoder());
@@ -160,7 +163,8 @@ return [
 - `scramble(0)` は `0` を返します（自明な固定点）。0 を渡す場合は考慮してください。
 - 有効な入力範囲：`[1, PHP_INT_MAX]`（63ビット非負整数）
 - salt は **奇数整数** でなければなりません。`kasumi:salt:generate` はこれを保証します。
-- bcmath 拡張が必要です。PHP 8.4+ には同梱されています。PHP 8.2/8.3 では別途インストールしてください。
+- bcmath 拡張は不要です。すべての演算をネイティブ PHP 整数で処理します。
+- アンスクランブルには `ScrambledValue` をそのまま `scramble()` に渡してください。中間値が `PHP_INT_MAX` を超える場合があるため、`toInt()` を経由しないでください。
 
 ## ライセンス
 

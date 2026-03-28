@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kasumi\Tests\Feature\Laravel;
 
+use Illuminate\Testing\PendingCommand;
 use Kasumi\Laravel\KasumiServiceProvider;
 use Orchestra\Testbench\TestCase;
 
@@ -20,7 +21,7 @@ class SaltGenerateCommandTest extends TestCase
     {
         parent::setUp();
 
-        $this->envPath = $this->app->environmentFilePath();
+        $this->envPath = ($this->app ?? $this->fail('App not initialized.'))->basePath('.env');
         file_put_contents($this->envPath, '');
     }
 
@@ -31,10 +32,24 @@ class SaltGenerateCommandTest extends TestCase
         parent::tearDown();
     }
 
+    /**
+     * artisan() は mockConsoleOutput=true（デフォルト）のとき常に PendingCommand を返す。
+     * PHPStan のユニオン型 PendingCommand|int を型安全に解決するラッパー。
+     *
+     * @param array<string, mixed> $parameters
+     */
+    private function runArtisan(string $command, array $parameters = []): PendingCommand
+    {
+        $result = $this->artisan($command, $parameters);
+        $this->assertInstanceOf(PendingCommand::class, $result);
+
+        return $result;
+    }
+
     public function test_writes_salt_to_env_file(): void
     {
         // When
-        $this->artisan('kasumi:salt:generate')->assertSuccessful();
+        $this->runArtisan('kasumi:salt:generate')->assertSuccessful();
 
         // Then
         $content = file_get_contents($this->envPath);
@@ -49,7 +64,7 @@ class SaltGenerateCommandTest extends TestCase
     public function test_written_salt_is_odd(): void
     {
         // When
-        $this->artisan('kasumi:salt:generate')->assertSuccessful();
+        $this->runArtisan('kasumi:salt:generate')->assertSuccessful();
 
         // Then
         $content = file_get_contents($this->envPath);
@@ -66,7 +81,7 @@ class SaltGenerateCommandTest extends TestCase
     public function test_show_option_displays_salt_without_writing(): void
     {
         // When
-        $this->artisan('kasumi:salt:generate --show')->assertSuccessful();
+        $this->runArtisan('kasumi:salt:generate --show')->assertSuccessful();
 
         // Then
         $content = file_get_contents($this->envPath);
@@ -85,7 +100,7 @@ class SaltGenerateCommandTest extends TestCase
         file_put_contents($this->envPath, 'KASUMI_SCRAMBLE_SALT=' . $oldSalt . PHP_EOL);
 
         // When
-        $this->artisan('kasumi:salt:generate --force')->assertSuccessful();
+        $this->runArtisan('kasumi:salt:generate --force')->assertSuccessful();
 
         // Then
         $content = file_get_contents($this->envPath);
