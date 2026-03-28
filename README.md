@@ -21,7 +21,7 @@ Sequential integer IDs are a liability when exposed in URLs or API responses:
 
 Kasumi scrambles IDs into opaque, fixed-length strings at the application layer, keeping your database schema and indexes untouched.
 
-> **Note:** Scrambling alone does not replace server-side authorization checks. Always enforce access control independently.
+> **Obfuscation, not encryption.** Kasumi hides the structure of IDs but does not provide cryptographic security. The salt space is 32 bits (~2 billion values), which is brute-forceable given enough known plaintext pairs. Do not rely on Kasumi as the sole defence against unauthorized access. Always enforce server-side authorization checks independently.
 
 ## How it works
 
