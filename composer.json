@@ -46,5 +46,7 @@
         "test": "vendor/bin/phpunit",
         "stan": "vendor/bin/phpstan analyse --memory-limit=512M",
         "pint": "vendor/bin/pint"
-    }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
 }

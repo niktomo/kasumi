@@ -164,7 +164,7 @@ $encoder   = new ChecksumEncoder(new Base36Encoder());
 $scrambler = Scrambler::fromSalt(salt: 1234567891, encoder: $encoder);
 
 $result = $scrambler->scramble(12345);
-echo $result;           // 19 文字の文字列、例: "0g00000001x7y3riz4k"
+echo $result;           // "0b00u000i001gx73riz"  (19文字、salt=1234567891 の場合)
 
 $original = $scrambler->scramble($result)->toInt(); // 12345
 
@@ -204,6 +204,10 @@ php artisan vendor:publish --tag=kasumi-config
 ```php
 return [
     'scramble_salt' => env('KASUMI_SCRAMBLE_SALT'),
+
+    // 使用する Encoder。ChecksumEncoder に切り替えると改ざん検出が有効になります（出力19文字）。
+    'encoder' => \Kasumi\Base36Encoder::class,
+    // 'encoder' => \Kasumi\ChecksumEncoder::class,
 ];
 ```
 

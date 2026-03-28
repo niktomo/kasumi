@@ -164,7 +164,7 @@ $encoder  = new ChecksumEncoder(new Base36Encoder());
 $scrambler = Scrambler::fromSalt(salt: 1234567891, encoder: $encoder);
 
 $result = $scrambler->scramble(12345);
-echo $result;           // 19-character string, e.g. "0g00000001x7y3riz4k"
+echo $result;           // "0b00u000i001gx73riz"  (19 chars, with salt 1234567891)
 
 $original = $scrambler->scramble($result)->toInt(); // 12345
 
@@ -204,6 +204,10 @@ php artisan vendor:publish --tag=kasumi-config
 ```php
 return [
     'scramble_salt' => env('KASUMI_SCRAMBLE_SALT'),
+
+    // Encoder to use. Switch to ChecksumEncoder to add tamper detection (19-char output).
+    'encoder' => \Kasumi\Base36Encoder::class,
+    // 'encoder' => \Kasumi\ChecksumEncoder::class,
 ];
 ```
 
