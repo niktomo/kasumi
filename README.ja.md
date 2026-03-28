@@ -2,41 +2,56 @@
 
 English | [日本語](README.ja.md)
 
-Laravel 向け、整数の可逆スクランブルライブラリ。
-
-`1, 2, 3` のような連番IDが `000000000009ix, 0ptyf8rz1ekw0, ...` に変換され、もう一度 scramble を呼ぶと元の値に戻ります。
+Laravel 向け、63ビット整数の可逆スクランブルライブラリ。bcmath・GMP 不要。
 
 ```php
-$scrambler->scramble(12345);          // "000000000009ix"
-$scrambler->scramble(/* decode */ …); // 12345 に戻る
+$scrambler->scramble(12345);      // ScrambledValue → "00000001x73riz"
+$scrambler->scramble($scrambled); // 12345 に戻る
 ```
+
+エンコードも復号も同じ `scramble()` 一つで完結。専用の decode メソッドは不要です。
 
 ## なぜ使うのか
 
-連番IDをそのままURLやAPIレスポンスに露出させると、総件数の推測やスクレイピングが容易になります。Kasumi はIDをスクランブルすることで、外部から推測しにくくします。
+連番 ID をそのまま URL や API レスポンスに露出させると、次のリスクが生じます。
 
-- **f(f(x)) = x** — 同じメソッド一つで暗号化・復号が完結。専用の decode は不要
-- **63ビット非負整数** — [Snowflake ID](https://en.wikipedia.org/wiki/Snowflake_ID) と完全に相性が良い（Snowflake IDは63ビット非負整数）
-- **決定論的** — salt が同じなら常に同じ結果。DBに保存不要
-- **bcmath 不要** — すべての演算をネイティブ PHP 整数で処理
+- **列挙攻撃** — `/users/1`, `/users/2`, … と連番を試すだけで、他ユーザーのデータへのアクセスや IDOR 脆弱性の探索が可能になります。
+- **ビジネスインテリジェンスの漏洩** — 注文ID `5983` が見えれば「このストアには約6000件の注文がある」とわかります。1時間おきに2回観測するだけで、競合他社に注文数・成長率を知られます。
+- **ユーザー数の推定** — ソーシャルゲームや SaaS では、連番ユーザー ID から登録者数の増加がリアルタイムで計測されます。
+
+Kasumi はアプリケーション層で ID をスクランブルし、不透明な固定長文字列に変換します。データベースのスキーマやインデックスはそのままです。
+
+> **注意：** スクランブルはサーバーサイドの認可チェックを代替するものではありません。アクセス制御は必ず別途実装してください。
 
 ## 仕組み
 
 [このアルゴリズム](https://cs.hatenablog.jp/entry/2013/06/19/135527) を、入力の上位32ビットと下位32ビットそれぞれに独立して適用します。
 
 ```
-scramble(x) = inverseSalt × reverseBits32(salt × x mod 2³²) mod 2³²
+scramble32(x) = inverseSalt × reverseBits32(salt × x mod 2³²) mod 2³²
 ```
 
 この関数は **involutory（対合）** です — 2回適用すると元の値に戻ります。
 
 ```
-f(f(x)) = x
+f(f(x)) = x  （x が [0, PHP_INT_MAX] の全ての値について）
 ```
 
-- `salt × x` — 乗算でビットを拡散（下位ビットは偏りやすい）
-- `reverseBits32(…)` — ビット反転で上位・下位を入れ替える
-- `inverseSalt × …` — モジュラー逆数による乗算で往復を実現
+- `salt × x mod 2³²` — 乗算でビットを32ビット空間全体に拡散
+- `reverseBits32(…)` — ビット反転で上位・下位ビットを入れ替え
+- `inverseSalt × …` — モジュラー逆数による乗算で対合性を実現
+
+すべての演算をネイティブ PHP 整数で処理します。bcmath も GMP も不要。
+
+## 類似ライブラリとの比較
+
+| | **Kasumi** | jenssegers/optimus | hashids / sqids |
+|---|---|---|---|
+| 最大入力 | **63ビット**（PHP_INT_MAX） | 31ビット上限 | 63ビット（bcmath/GMP が必要） |
+| 拡張モジュール | **不要** | 32ビット環境で GMP 推奨 | bcmath または GMP が必須 |
+| API | **f(f(x)) = x** | encode + decode | encode + decode |
+| 出力形式 | 整数 or Base36 文字列 | 整数のみ | 文字列のみ |
+| Laravel 統合 | **公式同梱** | サードパーティ | サードパーティ |
 
 ## 要件
 
@@ -64,11 +79,11 @@ php artisan kasumi:salt:generate
 ```php
 use Kasumi\Laravel\Facades\Kasumi;
 
+// スクランブル
 $result = Kasumi::scramble(12345);
+echo $result;           // "00000001x73riz"  (base36、常に14文字、salt に依存)
 
-echo $result;           // "000000000009ix"  (base36、常に14文字)
-
-// アンスクランブル — ScrambledValue をそのまま渡す（toInt() 不要）
+// アンスクランブル — ScrambledValue をそのまま渡す（中間値で toInt() しない）
 $original = Kasumi::scramble($result)->toInt(); // 12345
 ```
 
@@ -106,7 +121,7 @@ $scrambler = Scrambler::fromSalt(
 );
 
 $result = $scrambler->scramble(12345);
-echo $result;           // "000000000009ix"
+echo $result;           // "00000001x73riz"  (salt=1234567891 の場合)
 
 // アンスクランブル
 $original = $scrambler->scramble($result)->toInt(); // 12345
@@ -161,9 +176,10 @@ return [
 ## 注意事項
 
 - `scramble(0)` は `0` を返します（自明な固定点）。0 を渡す場合は考慮してください。
-- 有効な入力範囲：`[1, PHP_INT_MAX]`（63ビット非負整数）
+- 有効な入力範囲：`[0, PHP_INT_MAX]`（63ビット非負整数）
 - salt は **奇数整数** でなければなりません。`kasumi:salt:generate` はこれを保証します。
-- bcmath 拡張は不要です。すべての演算をネイティブ PHP 整数で処理します。
+- bcmath・GMP 拡張は不要です。すべての演算をネイティブ PHP 整数で処理します。
+- エンコード後の文字列は常に **14文字固定**（ゼロパディングされた Base36 を2分割して連結）。
 - アンスクランブルには `ScrambledValue` をそのまま `scramble()` に渡してください。中間値が `PHP_INT_MAX` を超える場合があるため、`toInt()` を経由しないでください。
 
 ## ライセンス

@@ -2,34 +2,56 @@
 
 [日本語](README.ja.md) | English
 
-Reversible integer scrambling for Laravel.
-
-Sequential IDs like `1, 2, 3` become `000000000009ix, 0ptyf8rz1ekw0, ...` — and calling scramble again returns the original value.
+Reversible 63-bit integer scrambling for Laravel — no bcmath, no GMP, no extra extensions.
 
 ```php
-$scrambler->scramble(12345);          // "000000000009ix"
-$scrambler->scramble(/* decode */ …); // back to 12345
+$scrambler->scramble(12345);          // ScrambledValue → "00000001x73riz"
+$scrambler->scramble($scrambled);     // back to 12345
 ```
+
+The same `scramble()` call encodes **and** decodes — no separate methods needed.
+
+## Why
+
+Sequential integer IDs are a liability when exposed in URLs or API responses:
+
+- **Enumeration** — an attacker iterates `/users/1`, `/users/2`, … to harvest data or probe for IDOR vulnerabilities.
+- **Business intelligence leakage** — order ID `5983` tells a competitor "this store has ~6000 orders." Two observations an hour apart reveal the transaction rate.
+- **User-count estimation** — in social games and SaaS products, sequential user IDs let rivals track your growth in real time.
+
+Kasumi scrambles IDs into opaque, fixed-length strings at the application layer, keeping your database schema and indexes untouched.
+
+> **Note:** Scrambling alone does not replace server-side authorization checks. Always enforce access control independently.
 
 ## How it works
 
 Based on [this algorithm](https://cs.hatenablog.jp/entry/2013/06/19/135527), applied independently to the upper 32 bits and lower 32 bits of the input:
 
 ```
-scramble(x) = inverseSalt × reverseBits32(salt × x mod 2³²) mod 2³²
+scramble32(x) = inverseSalt × reverseBits32(salt × x mod 2³²) mod 2³²
 ```
 
 The function is **involutory** — applying it twice returns the original value:
 
 ```
-f(f(x)) = x
+f(f(x)) = x  for all x in [0, PHP_INT_MAX]
 ```
 
-- `salt × x` — multiplication spreads bits (lower bits tend to be stable)
-- `reverseBits32(…)` — bit reversal swaps lower and upper bits
-- `inverseSalt × …` — multiplication by the modular inverse restores the round-trip
+- `salt × x mod 2³²` — multiplication disperses bits across the 32-bit space
+- `reverseBits32(…)` — bit reversal mixes upper and lower halves
+- `inverseSalt × …` — multiplication by the modular inverse makes the whole operation self-inverse
 
-All arithmetic uses native PHP integers (no bcmath required).
+All arithmetic uses native PHP integers. No bcmath or GMP required.
+
+## Compared to alternatives
+
+| | **Kasumi** | jenssegers/optimus | hashids / sqids |
+|---|---|---|---|
+| Max input | **63-bit** (PHP_INT_MAX) | 31-bit only | 63-bit (needs bcmath/GMP) |
+| Extensions | **none** | optional GMP | bcmath or GMP required |
+| API | **f(f(x)) = x** | encode + decode | encode + decode |
+| Output | integer or Base36 string | integer | string only |
+| Laravel | **built-in** | third-party wrapper | third-party wrapper |
 
 ## Requirements
 
@@ -57,11 +79,11 @@ This adds `KASUMI_SCRAMBLE_SALT=<odd integer>` to your `.env`. Keep this value s
 ```php
 use Kasumi\Laravel\Facades\Kasumi;
 
+// Scramble
 $result = Kasumi::scramble(12345);
+echo $result;           // "00000001x73riz"  (base36, always 14 chars, salt-dependent)
 
-echo $result;           // "000000000009ix"  (base36, always 14 chars)
-
-// Unscramble — pass the ScrambledValue directly (no toInt() needed)
+// Unscramble — pass the ScrambledValue directly (no toInt() on intermediate values)
 $original = Kasumi::scramble($result)->toInt(); // 12345
 ```
 
@@ -99,7 +121,7 @@ $scrambler = Scrambler::fromSalt(
 );
 
 $result = $scrambler->scramble(12345);
-echo $result;           // "000000000009ix"
+echo $result;           // "00000001x73riz"  (with salt 1234567891)
 
 // Unscramble
 $original = $scrambler->scramble($result)->toInt(); // 12345
@@ -154,9 +176,10 @@ return [
 ## Notes
 
 - `scramble(0)` returns `0` (trivial fixed point). Avoid passing `0` if this is a concern.
-- Valid input range: `[1, PHP_INT_MAX]` (63-bit non-negative integers).
+- Valid input range: `[0, PHP_INT_MAX]` (63-bit non-negative integers).
 - The salt must be an **odd integer**. `kasumi:salt:generate` guarantees this.
-- No bcmath extension required — all arithmetic uses native PHP integers.
+- No bcmath or GMP extension required — all arithmetic uses native PHP integers.
+- The encoded string is always exactly **14 characters** (two zero-padded base36 halves).
 - To unscramble, pass the `ScrambledValue` directly to `scramble()`. Avoid calling `toInt()` on the scrambled value before passing it back, as the intermediate value may exceed `PHP_INT_MAX`.
 
 ## License
