@@ -12,7 +12,7 @@ use PHPUnit\Framework\TestCase;
 
 class ScramblerTest extends TestCase
 {
-    private const int SALT = 3;
+    private const SALT = 3;
 
     private Scrambler $scrambler;
 

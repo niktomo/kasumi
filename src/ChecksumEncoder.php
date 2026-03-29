@@ -24,14 +24,14 @@ namespace Kasumi;
 final class ChecksumEncoder implements Encoder
 {
     /** Positions within the body where filler characters are inserted. */
-    private const array FILLER_POSITIONS = [2, 6, 10];
+    private const FILLER_POSITIONS = [2, 6, 10];
 
-    private const int PREFIX_LENGTH = 2;
+    private const PREFIX_LENGTH = 2;
 
-    private const int FILLER_COUNT = 3;
+    private const FILLER_COUNT = 3;
 
     /** 36^5 = 60,466,176 — number of distinct 5-char base36 strings. */
-    private const int CHECKSUM_MOD = 60_466_176;
+    private const CHECKSUM_MOD = 60_466_176;
 
     private readonly int $innerLength;
 
