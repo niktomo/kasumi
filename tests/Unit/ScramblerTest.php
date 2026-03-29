@@ -5,26 +5,20 @@ declare(strict_types=1);
 namespace Kasumi\Tests\Unit;
 
 use Kasumi\Base36Encoder;
-use Kasumi\ScrambleKey;
-use Kasumi\ScrambleKeyFactory;
-use Kasumi\Scrambler;
 use Kasumi\ScrambledValue;
+use Kasumi\Scrambler;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class ScramblerTest extends TestCase
 {
-    // salt=3, inverseSalt: 3 * inv ≡ 1 mod 2^63
-    private const int SALT         = 3;
-
-    private const int INVERSE_SALT = 3074457345618258603;
+    private const int SALT = 3;
 
     private Scrambler $scrambler;
 
     protected function setUp(): void
     {
-        $key = new ScrambleKey(self::SALT, self::INVERSE_SALT);
-        $this->scrambler = new Scrambler($key);
+        $this->scrambler = Scrambler::fromSalt(self::SALT);
     }
 
     public function test_scramble_returns_scrambled_value(): void
@@ -40,8 +34,8 @@ class ScramblerTest extends TestCase
     #[DataProvider('integers')]
     public function test_scramble_is_involutory(int $n): void
     {
-        // Act
-        $result = $this->scrambler->scramble($this->scrambler->scramble($n)->toInt())->toInt();
+        // Act — ScrambledValue を直接渡すことで toInt() の overflow を回避
+        $result = $this->scrambler->scramble($this->scrambler->scramble($n))->toInt();
 
         // Assert
         $this->assertSame(
@@ -55,11 +49,15 @@ class ScramblerTest extends TestCase
     public static function integers(): array
     {
         return [
-            'zero'    => [0],
-            'one'     => [1],
+            'zero' => [0],
+            'one' => [1],
             'typical' => [42],
-            'large'   => [1000000],
-            'max'     => [PHP_INT_MAX],
+            'large' => [1000000],
+            '32bit all 1s' => [0xFFFFFFFF],   // lower=0xFFFFFFFF, upper=0
+            '32bit high-bit 0' => [0x7FFFFFFF],   // lower=0x7FFFFFFF, upper=0
+            '33bit all 1s' => [0x1FFFFFFFF],  // lower=0xFFFFFFFF, upper=1（境界またぎ）
+            '33bit low-bit 0' => [0x1FFFFFFFE],  // lower=0xFFFFFFFE, upper=1
+            'max' => [PHP_INT_MAX],
         ];
     }
 
@@ -67,11 +65,15 @@ class ScramblerTest extends TestCase
     #[DataProvider('nonFixedPointIntegers')]
     public function test_scramble_produces_different_value(int $n): void
     {
+        // Arrange — n < 2^32 なので identity encoding は encode(0, n)
+        $encoder = new Base36Encoder;
+        $identityStr = $encoder->encode(0, $n);
+
         // Act
-        $scrambled = $this->scrambler->scramble($n)->toInt();
+        $scrambledStr = (string) $this->scrambler->scramble($n);
 
         // Assert
-        $this->assertNotSame($n, $scrambled, "scramble({$n}) が元の値と異なること");
+        $this->assertNotSame($identityStr, $scrambledStr, "scramble({$n}) が元の値と異なること");
     }
 
     /** @return list<array{0: positive-int}> */
@@ -81,7 +83,6 @@ class ScramblerTest extends TestCase
             [1],
             [12345],
             [1_000_000],
-            [PHP_INT_MAX],
         ];
     }
 
@@ -100,8 +101,8 @@ class ScramblerTest extends TestCase
         $n = 99999;
 
         // Act
-        $first  = $this->scrambler->scramble($n)->toInt();
-        $second = $this->scrambler->scramble($n)->toInt();
+        $first = (string) $this->scrambler->scramble($n);
+        $second = (string) $this->scrambler->scramble($n);
 
         // Assert
         $this->assertSame($first, $second, '同じ入力に対して常に同じ値を返すこと');
@@ -117,41 +118,53 @@ class ScramblerTest extends TestCase
         $this->scrambler->scramble(-1);
     }
 
-    public function test_involutory_with_generated_key(): void
+    public function test_involutory_with_another_salt(): void
     {
         // Arrange
-        $scrambler = Scrambler::fromSalt((new ScrambleKeyFactory())->create()->salt);
-        $original  = 7654321;
+        $scrambler = Scrambler::fromSalt(1234567891);
+        $original = 7654321;
 
         // Act
-        $result = $scrambler->scramble($scrambler->scramble($original)->toInt())->toInt();
+        $result = $scrambler->scramble($scrambler->scramble($original))->toInt();
 
         // Assert
         $this->assertSame(
             $original,
             $result,
-            'ScrambleKeyFactory で生成したキーでも involution が成立すること'
+            '別の奇数 salt でも involution が成立すること'
         );
     }
 
     public function test_to_string_uses_encoder(): void
     {
         // Arrange
-        $scrambler = Scrambler::fromSalt(self::SALT, new Base36Encoder());
+        $scrambler = Scrambler::fromSalt(self::SALT, new Base36Encoder);
 
         // Act
         $result = $scrambler->scramble(12345);
 
         // Assert
         $this->assertMatchesRegularExpression(
-            '/^[0-9a-z]+$/',
+            '/^[0-9a-z]{14}$/',
             (string) $result,
-            'Base36Encoder を使うと 0-9a-z の文字列になること'
+            'Base36Encoder を使うと 14文字の 0-9a-z の文字列になること'
         );
+    }
+
+    public function test_scramble_accepts_scrambled_value_as_input(): void
+    {
+        // Arrange
+        $original = 12345;
+
+        // Act
+        $scrambled = $this->scrambler->scramble($original);
+        $unscrambled = $this->scrambler->scramble($scrambled);
+
+        // Assert
         $this->assertSame(
-            $result->toInt(),
-            (new Base36Encoder())->decode((string) $result),
-            'decode すると toInt() と一致すること'
+            $original,
+            $unscrambled->toInt(),
+            'ScrambledValue を引数に渡すと元の値に戻ること'
         );
     }
 }

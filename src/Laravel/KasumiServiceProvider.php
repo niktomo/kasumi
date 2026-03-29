@@ -15,7 +15,7 @@ class KasumiServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__ . '/../../config/kasumi.php', 'kasumi');
+        $this->mergeConfigFrom(__DIR__.'/../../config/kasumi.php', 'kasumi');
 
         $this->app->singleton(Scrambler::class, function () {
             /** @var array{scramble_salt: int, encoder?: string} $config */
@@ -38,7 +38,7 @@ class KasumiServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__ . '/../../config/kasumi.php' => config_path('kasumi.php'),
+            __DIR__.'/../../config/kasumi.php' => config_path('kasumi.php'),
         ], 'kasumi-config');
 
         if ($this->app->runningInConsole()) {
@@ -49,14 +49,14 @@ class KasumiServiceProvider extends ServiceProvider
     private function resolveEncoder(string $encoderClass): Encoder
     {
         if ($encoderClass === ChecksumEncoder::class) {
-            return new ChecksumEncoder(new Base36Encoder());
+            return new ChecksumEncoder(new Base36Encoder);
         }
 
-        $instance = new $encoderClass();
+        $instance = new $encoderClass;
 
-        if (!$instance instanceof Encoder) {
+        if (! $instance instanceof Encoder) {
             throw new \RuntimeException(
-                "kasumi.encoder [{$encoderClass}] must implement " . Encoder::class . '.'
+                "kasumi.encoder [{$encoderClass}] must implement ".Encoder::class.'.'
             );
         }
 

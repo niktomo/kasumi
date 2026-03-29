@@ -15,7 +15,7 @@ class ChecksumEncoderTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->encoder = new ChecksumEncoder(new Base36Encoder());
+        $this->encoder = new ChecksumEncoder(new Base36Encoder);
     }
 
     // -------------------------------------------------------------------------
@@ -35,10 +35,6 @@ class ChecksumEncoderTest extends TestCase
         );
     }
 
-    /**
-     * @param int $upper
-     * @param int $lower
-     */
     #[DataProvider('roundTripValues')]
     public function test_encoded_string_is_always_19_chars(int $upper, int $lower): void
     {
@@ -57,15 +53,11 @@ class ChecksumEncoderTest extends TestCase
     // ラウンドトリップ
     // -------------------------------------------------------------------------
 
-    /**
-     * @param int $upper
-     * @param int $lower
-     */
     #[DataProvider('roundTripValues')]
     public function test_encode_then_decode_returns_original(int $upper, int $lower): void
     {
         // Act
-        $encoded          = $this->encoder->encode($upper, $lower);
+        $encoded = $this->encoder->encode($upper, $lower);
         [$decUpper, $decLower] = $this->encoder->decode($encoded);
 
         // Assert
@@ -94,7 +86,7 @@ class ChecksumEncoderTest extends TestCase
     public function test_encode_is_deterministic(): void
     {
         // Act
-        $first  = $this->encoder->encode(0, 99999);
+        $first = $this->encoder->encode(0, 99999);
         $second = $this->encoder->encode(0, 99999);
 
         // Assert
@@ -158,7 +150,7 @@ class ChecksumEncoderTest extends TestCase
         // Arrange
         $valid = $this->encoder->encode(0, 42);
         // 先頭2文字（プレフィックス）を書き換え
-        $tampered = 'zz' . substr($valid, 2);
+        $tampered = 'zz'.substr($valid, 2);
 
         // Assert
         $this->expectException(\InvalidArgumentException::class);
@@ -173,8 +165,8 @@ class ChecksumEncoderTest extends TestCase
         // Arrange
         $valid = $this->encoder->encode(0, 42);
         // ボディ内 pos=2（フィラー位置）を書き換え: prefix(2) + body[2] = index 4
-        $index    = 4;
-        $tampered = substr($valid, 0, $index) . ($valid[$index] === 'z' ? '0' : 'z') . substr($valid, $index + 1);
+        $index = 4;
+        $tampered = substr($valid, 0, $index).($valid[$index] === 'z' ? '0' : 'z').substr($valid, $index + 1);
 
         // Assert
         $this->expectException(\InvalidArgumentException::class);
@@ -189,8 +181,8 @@ class ChecksumEncoderTest extends TestCase
         // Arrange
         $valid = $this->encoder->encode(0, 12345);
         // ボディ内 pos=0（内部エンコード文字）を書き換え: prefix(2) + body[0] = index 2
-        $index    = 2;
-        $tampered = substr($valid, 0, $index) . ($valid[$index] === 'z' ? '0' : 'z') . substr($valid, $index + 1);
+        $index = 2;
+        $tampered = substr($valid, 0, $index).($valid[$index] === 'z' ? '0' : 'z').substr($valid, $index + 1);
 
         // Assert
         $this->expectException(\InvalidArgumentException::class);

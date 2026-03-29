@@ -23,15 +23,3 @@ vendor/bin/pint
 - `src/Encoder` — encode/decode インターフェース
 - `src/Base36Encoder` — 0-9a-z の13文字固定幅実装
 
-## Test Conventions
-
-- UnitTests: AAA format (// Arrange, // Act, // Assert)
-- FeatureTests: BDD/Gherkin style (Given/When/Then)
-- `#[DataProvider]` for combination tests
-- 全アサーションに「何を検証し、何が期待結果か」のメッセージを付与
-
-## Working Style
-
-- 応答は日本語
-- 複数選択肢は ★5段階推奨度＋理由を表形式で示す
-- プラン提示前に 目的・動作・解決策・影響範囲の4項目を説明する

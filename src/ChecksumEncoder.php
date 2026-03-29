@@ -27,12 +27,14 @@ final class ChecksumEncoder implements Encoder
     private const array FILLER_POSITIONS = [2, 6, 10];
 
     private const int PREFIX_LENGTH = 2;
-    private const int FILLER_COUNT  = 3;
+
+    private const int FILLER_COUNT = 3;
 
     /** 36^5 = 60,466,176 — number of distinct 5-char base36 strings. */
     private const int CHECKSUM_MOD = 60_466_176;
 
     private readonly int $innerLength;
+
     private readonly int $totalLength;
 
     public function __construct(private readonly Encoder $inner)
@@ -43,16 +45,17 @@ final class ChecksumEncoder implements Encoder
 
     public function encode(int $upper, int $lower): string
     {
-        $inner  = $this->inner->encode($upper, $lower);
-        $check  = $this->computeCheck($inner);
+        $inner = $this->inner->encode($upper, $lower);
+        $check = $this->computeCheck($inner);
         $prefix = substr($check, 0, self::PREFIX_LENGTH);
         $filler = str_split(substr($check, self::PREFIX_LENGTH));
 
-        return $prefix . $this->buildBody($inner, $filler);
+        return $prefix.$this->buildBody($inner, $filler);
     }
 
     /**
      * @return array{0: int, 1: int}
+     *
      * @throws \InvalidArgumentException if the string was not produced by this encoder
      */
     public function decode(string $s): array
@@ -62,11 +65,11 @@ final class ChecksumEncoder implements Encoder
         }
 
         $prefix = substr($s, 0, self::PREFIX_LENGTH);
-        $body   = substr($s, self::PREFIX_LENGTH);
+        $body = substr($s, self::PREFIX_LENGTH);
 
         [$inner, $filler] = $this->parseBody($body);
 
-        if (!hash_equals($this->computeCheck($inner), $prefix . implode('', $filler))) {
+        if (! hash_equals($this->computeCheck($inner), $prefix.implode('', $filler))) {
             throw new \InvalidArgumentException('Invalid encoded ID.');
         }
 
@@ -97,10 +100,10 @@ final class ChecksumEncoder implements Encoder
     /** @param list<string> $filler */
     private function buildBody(string $inner, array $filler): string
     {
-        $chars     = str_split($inner);
-        $innerIdx  = 0;
+        $chars = str_split($inner);
+        $innerIdx = 0;
         $fillerIdx = 0;
-        $result    = [];
+        $result = [];
 
         for ($pos = 0, $len = $this->innerLength + self::FILLER_COUNT; $pos < $len; $pos++) {
             $result[] = in_array($pos, self::FILLER_POSITIONS, true)
@@ -116,7 +119,7 @@ final class ChecksumEncoder implements Encoder
      */
     private function parseBody(string $body): array
     {
-        $inner  = [];
+        $inner = [];
         $filler = [];
 
         for ($pos = 0, $len = strlen($body); $pos < $len; $pos++) {

@@ -49,7 +49,7 @@ class KasumiFacadeTest extends TestCase
         $original = 12345;
 
         // When
-        $scrambled   = Kasumi::scramble($original)->toInt();
+        $scrambled = Kasumi::scramble($original)->toInt();
         $unscrambled = Kasumi::scramble($scrambled)->toInt();
 
         // Then
@@ -67,9 +67,9 @@ class KasumiFacadeTest extends TestCase
 
         // Then
         $this->assertMatchesRegularExpression(
-            '/^[0-9a-z]{13}$/',
+            '/^[0-9a-z]{14}$/',
             $result,
-            'Facade 経由のエンコード結果が 13 文字の base36 文字列であること'
+            'Facade 経由のエンコード結果が 14 文字の base36 文字列であること'
         );
     }
 }

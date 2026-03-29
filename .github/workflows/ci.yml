@@ -14,11 +14,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Laravel 12
+          # Laravel 12 — PHP 8.2 は PHPUnit 12.5+ が非対応のため ^11.5 を使用
           - php: '8.2'
             laravel: '12.*'
             testbench: '^10.0'
-            phpunit: '^12.0'
+            phpunit: '^11.5'
           - php: '8.3'
             laravel: '12.*'
             testbench: '^10.0'
@@ -27,7 +27,7 @@ jobs:
             laravel: '12.*'
             testbench: '^10.0'
             phpunit: '^12.0'
-          # Laravel 13
+          # Laravel 13 — testbench v11 は PHP ^8.3 必須
           - php: '8.3'
             laravel: '13.*'
             testbench: '^11.0'

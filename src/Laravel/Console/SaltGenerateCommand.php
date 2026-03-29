@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Kasumi\Laravel\Console;
 
 use Illuminate\Console\Command;
+
 class SaltGenerateCommand extends Command
 {
     protected $signature = 'kasumi:salt:generate
@@ -18,7 +19,7 @@ class SaltGenerateCommand extends Command
         $salt = random_int(1, 0xFFFFFFFF) | 1;
 
         if ($this->option('show')) {
-            $this->line('KASUMI_SCRAMBLE_SALT=' . $salt);
+            $this->line('KASUMI_SCRAMBLE_SALT='.$salt);
 
             return self::SUCCESS;
         }
@@ -26,7 +27,7 @@ class SaltGenerateCommand extends Command
         $envPath = $this->laravel->basePath('.env');
 
         if (! file_exists($envPath)) {
-            $this->error('.env file not found: ' . $envPath);
+            $this->error('.env file not found: '.$envPath);
 
             return self::FAILURE;
         }
@@ -47,8 +48,8 @@ class SaltGenerateCommand extends Command
         }
 
         $new = str_contains($current, 'KASUMI_SCRAMBLE_SALT=')
-            ? preg_replace('/^KASUMI_SCRAMBLE_SALT=.*/m', 'KASUMI_SCRAMBLE_SALT=' . $salt, $current)
-            : $current . PHP_EOL . 'KASUMI_SCRAMBLE_SALT=' . $salt . PHP_EOL;
+            ? preg_replace('/^KASUMI_SCRAMBLE_SALT=.*/m', 'KASUMI_SCRAMBLE_SALT='.$salt, $current)
+            : $current.PHP_EOL.'KASUMI_SCRAMBLE_SALT='.$salt.PHP_EOL;
 
         assert(is_string($new));
         file_put_contents($envPath, $new);

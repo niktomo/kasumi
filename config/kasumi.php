@@ -1,5 +1,7 @@
 <?php
 
+use Kasumi\Base36Encoder;
+
 return [
     /*
      * An odd integer used as the scramble salt.
@@ -18,5 +20,5 @@ return [
      *
      * You may also specify any class that implements \Kasumi\Encoder.
      */
-    'encoder' => \Kasumi\Base36Encoder::class,
+    'encoder' => Base36Encoder::class,
 ];

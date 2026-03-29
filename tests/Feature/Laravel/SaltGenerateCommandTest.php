@@ -36,7 +36,7 @@ class SaltGenerateCommandTest extends TestCase
      * artisan() は mockConsoleOutput=true（デフォルト）のとき常に PendingCommand を返す。
      * PHPStan のユニオン型 PendingCommand|int を型安全に解決するラッパー。
      *
-     * @param array<string, mixed> $parameters
+     * @param  array<string, mixed>  $parameters
      */
     private function runArtisan(string $command, array $parameters = []): PendingCommand
     {
@@ -97,7 +97,7 @@ class SaltGenerateCommandTest extends TestCase
     {
         // Given
         $oldSalt = '1234567891';
-        file_put_contents($this->envPath, 'KASUMI_SCRAMBLE_SALT=' . $oldSalt . PHP_EOL);
+        file_put_contents($this->envPath, 'KASUMI_SCRAMBLE_SALT='.$oldSalt.PHP_EOL);
 
         // When
         $this->runArtisan('kasumi:salt:generate --force')->assertSuccessful();

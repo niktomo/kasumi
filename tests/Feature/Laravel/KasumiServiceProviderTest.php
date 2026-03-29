@@ -28,7 +28,7 @@ class KasumiServiceProviderTest extends TestCase
         Config::set('kasumi.scramble_salt', 1234567891);
 
         // When
-        $app      = $this->app ?? $this->fail('Application が初期化されていること');
+        $app = $this->app ?? $this->fail('Application が初期化されていること');
         $scrambler = $app->make(Scrambler::class);
 
         // Then
@@ -46,9 +46,9 @@ class KasumiServiceProviderTest extends TestCase
         Config::set('kasumi.encoder', ChecksumEncoder::class);
 
         // When
-        $app      = $this->app ?? $this->fail('Application が初期化されていること');
+        $app = $this->app ?? $this->fail('Application が初期化されていること');
         $scrambler = $app->make(Scrambler::class);
-        $encoded   = (string) $scrambler->scramble(12345);
+        $encoded = (string) $scrambler->scramble(12345);
 
         // Then
         $this->assertInstanceOf(
