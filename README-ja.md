@@ -1,6 +1,6 @@
 # Kasumi 霞
 
-English | [日本語](README.ja.md)
+English | [日本語](README-ja.md)
 
 Laravel 向け、63ビット整数の可逆スクランブルライブラリ。bcmath・GMP 不要。
 

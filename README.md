@@ -1,6 +1,6 @@
 # Kasumi 霞
 
-[日本語](README.ja.md) | English
+[日本語](README-ja.md) | English
 
 Reversible 63-bit integer scrambling for Laravel — no bcmath, no GMP, no extra extensions.
 
